@@ -1,0 +1,58 @@
+<?xml version="1.0" ?>
+<launch>
+
+  <arg name="paused" default="false"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="gui" default="true"/>
+  <arg name="headless" default="false"/>
+  <arg name="debug" default="false"/>
+  <arg name="scan_topic" default="/laser/scan"/>
+  
+  
+  <env name="GAZEBO_MODEL_PATH" value="$(find rl_exam)/models:$(optenv GAZEBO_MODEL_PATH)" />
+
+  <!-- We resume the logic in empty_world.launch -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+   <arg name="world_name" value="$(find rl_exam)/world/model.world"/> 
+    <arg name="debug" value="$(arg debug)" />
+    <arg name="gui" value="$(arg gui)" />
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+    <arg name="headless" value="$(arg headless)"/>
+  </include>
+   
+  <!-- SPawn the two models -->
+  <group ns="kuka_iiwa">
+    <include file="$(find rl_exam)/launch/kuka_spawn.launch">
+        <arg name="robot_name" value="kuka_iiwa"/>
+    </include>  
+  </group> 
+
+  <group ns="turtlebot3">
+    <include file="$(find rl_exam)/launch/turtlebot3_spawn.launch">
+        <arg name="robot_name" value="turtlebot3"/>
+    </include>
+  </group>   
+
+  <!-- RVIZ -->
+  <node name="rviz" pkg="rviz" type="rviz"/> 
+  
+<!--  Map server -->
+  <arg name="map_file" default="$(find rl_exam)/maps/my_map.yaml" />
+  <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
+  <node pkg="tf" name="world_to_map" type="static_transform_publisher" args="0 0 0 0 0 0 world map 100" />
+
+ <!-- AMCL --> 
+  <include file="$(find rl_exam)/launch/amcl_turtlebot3.launch">
+   <arg name="use_map_topic" default="true"/>
+    </include>
+  
+
+ <!--MOVE BASE -->   
+  <include file="$(find rl_exam)/launch/move_base.launch"/> 
+  
+  <!-- CONTROLLER -->
+  <include file="$(find rl_exam)/launch/kuka_control.launch"/>
+  
+
+</launch>

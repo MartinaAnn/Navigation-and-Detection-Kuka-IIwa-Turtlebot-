@@ -1,0 +1,17 @@
+<?xml version="1.0" ?>
+<launch>
+
+    <arg name="x" default="-3.06"/>
+    <arg name="y" default="0"/>
+    <arg name="z" default="0"/>
+    <arg name="robot_name" default="turtlebot3"/>
+
+    <!--  ******************** Robot Model ********************  -->
+    <param name="robot_description" command="$(find xacro)/xacro '$(find turtlebot3_description)/urdf/turtlebot3_burger.urdf.xacro'"/>
+   <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
+     </node>
+    <node pkg="gazebo_ros" type="spawn_model" name="spawn_$(arg robot_name)" respawn="false" output="screen"
+        args="-urdf -model turtlebot3_burger.urdf -param robot_description -x $(arg x) -y $(arg y) -z $(arg z)">
+    </node>
+    
+</launch>

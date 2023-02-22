@@ -1,0 +1,14 @@
+material Aruco/marker5
+{
+	technique
+	{
+		pass
+		{
+			texture_unit
+			{
+				texture Marker5.png
+			}
+		}
+	}
+}
+
