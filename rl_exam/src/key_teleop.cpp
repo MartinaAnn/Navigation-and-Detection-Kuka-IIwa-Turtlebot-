@@ -4,7 +4,7 @@
 
 using namespace std;
 
-#define LIN_VEL 0.2
+#define LIN_VEL 0.8
 #define ANG_VEL 0.8
 
 
