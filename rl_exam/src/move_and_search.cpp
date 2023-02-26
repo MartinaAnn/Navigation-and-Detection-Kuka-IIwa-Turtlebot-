@@ -20,24 +20,16 @@ class SEARCH_OBJ{
 			float w;
 		};
 		ros::NodeHandle _nh;
-		ros::Subscriber  _marker_sub;
+	//	ros::Subscriber  _marker_sub;
 		//vector<aruco_msgs::Marker> _marker;
 		//aruco_msgs::MarkerArray::Ptr _marker_msg;
 		std::vector<Coord> _room;
-	
-
-	//ASSIGNING ROOMS COORDINATES
-	
-
-
-
-    
+  
     public:
-	//	SEARCH_OBJ();
+		SEARCH_OBJ(); 
 		void chooseinput();
 		void run();
         void move(float x_des, float y_des, float w_des);
-		void create_vector();
 		//void turn();
 		void check();
 		bool done = false;
@@ -54,9 +46,8 @@ class SEARCH_OBJ{
 
 };
 
-void SEARCH_OBJ::create_vector()
-{
-	struct Coord first_room ;
+SEARCH_OBJ::SEARCH_OBJ(){
+struct Coord first_room ;
 		first_room.x=0.0;
 		first_room.y=0.0;
 		first_room.w=1.0;
@@ -87,6 +78,7 @@ void SEARCH_OBJ::create_vector()
 		_room.push_back(third_room);
 		_room.push_back(fourth_room);
 }
+
 void SEARCH_OBJ::chooseinput() {
 
 	int num;
@@ -207,11 +199,8 @@ int main(int argc, char** argv ) {
 
 	ros::init(argc, argv, "search_obj"); //node name
 
-	/*	struct Coord kuka;
-		*/
 	SEARCH_OBJ so;
 
-	so.create_vector();
 	so.chooseinput();
 	so.run();
 	return 0;
