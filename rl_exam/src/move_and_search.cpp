@@ -110,7 +110,7 @@ void SEARCH_OBJ::chooseinput() {
 			marker_id_des=35;
 	};
 
-	//done = true;	
+	
 	return;
 }
 
@@ -152,7 +152,7 @@ void SEARCH_OBJ::move(float x_des, float y_des, float w_des){
 	   }
      else
        ROS_INFO("The base failed to move for some reason");
-	
+	return;
    
 }
 
@@ -161,50 +161,42 @@ void SEARCH_OBJ::move(float x_des, float y_des, float w_des){
 void SEARCH_OBJ::check(){
 
 	_marker_sub = _nh.subscribe("/aruco_marker_publisher/markers", 10, &SEARCH_OBJ::markerMsgsCallback, this);
-	//_marker_msg = aruco_msgs::MarkerArray::Ptr(new aruco_msgs::MarkerArray());
+
 	
-	
-   // if(done==true) { 
-		int i=0;
+	int i=0;
 		while (i<4){
        	 move(_room[i].x, _room[i].y, _room[i].w);
-			//id_read=
-		 /* if(!pubmark){*/
-				if(center && i!=3/*&& turned*/) {
-				pubmark=true;
-				i++;}
-				/*else if (center && !turned)
-				turn();*/
-		/*  }*/
-
-
-      	/*  else if (pubmark)
-       	     {*/
-				else if(/*marker.id==marker_id_des*/ i==3){	
-				move(kuka.x,kuka.y,kuka.w);	
-				//cout << id <<endl;
+		 
+	  	  if (center)
+		  pubmark=true;
+		   if( marker_msg.markers.size() > 0 ) 
+       	     {
+				if( marker_msg.markers[0].id==marker_id_des){	
 				ROS_INFO("Turtlebot found the tool, now it will reach Kuka Iiwa.");
 				found=true;
+				move(kuka.x,kuka.y,kuka.w);	
+				//cout << id <<endl;
 				break;
 				}
-			/*	else if(marker.id!=marker_id_des && center && turned)
+				else if( marker_msg.markers[0].id!=marker_id_des && turned)
 				i++;          
          	   
-         	/*   }*/
+         	  }
         	
-   		// }
+   		 }
+		 return;
 	}
-}
+
 void SEARCH_OBJ::markerMsgsCallback(const aruco_msgs::MarkerArray::ConstPtr &markerpoint){
 	if(pubmark){
 	marker_msg.markers = markerpoint -> markers;
-	cout << marker_msg.markers[0].id << endl;
+	//cout << marker_msg.markers[0].id << endl;
 	}
 }
 
 void SEARCH_OBJ::run() {
 	boost::thread check_t( &SEARCH_OBJ::check, this);
-	boost::thread move_t(&SEARCH_OBJ::move, this, x_des, y_des, w_des);
+	//boost::thread move_t(&SEARCH_OBJ::move, this, x_des, y_des, w_des);
 	boost::thread markerMsgsCallback_t(&SEARCH_OBJ::markerMsgsCallback, this, markerpoint);
 	ros::spin();
 }
