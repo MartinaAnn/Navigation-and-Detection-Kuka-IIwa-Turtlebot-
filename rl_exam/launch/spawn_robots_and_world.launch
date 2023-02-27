@@ -46,7 +46,6 @@
   <include file="$(find rl_exam)/launch/amcl_turtlebot3.launch">
    <arg name="use_map_topic" default="true"/>
   </include>
-  
 
  <!--MOVE BASE -->   
   <include file="$(find rl_exam)/launch/move_base.launch"/> 

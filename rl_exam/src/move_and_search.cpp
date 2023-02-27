@@ -1,11 +1,10 @@
 #include "ros/ros.h"
 #include <aruco/aruco.h>
 #include "boost/thread.hpp"
+#include "geometry_msgs/Twist.h"
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
-//#include <aruco_ros/aruco_ros_utils.h>
 #include <aruco_msgs/MarkerArray.h>
-//#include <aruco_msgs/Marker.h>
 #include <tf/transform_listener.h>
 #include <std_msgs/UInt32MultiArray.h>
 
@@ -21,50 +20,47 @@ class SEARCH_OBJ{
 		};
 		ros::NodeHandle _nh;
 		ros::Subscriber  _marker_sub;
-		//vector<aruco_msgs::Marker> _marker;
+		ros::Publisher _vel_pub;
 		const aruco_msgs::MarkerArray::ConstPtr markerpoint;
+		geometry_msgs::Twist cmd_vel;
 		std::vector<Coord> _room;
-		int id_read;
+		aruco_msgs::MarkerArray marker_msg;
 		float x_des, y_des, w_des;
+		float rot_vel=0.8;
+		int marker_id_des=0;
+		struct Coord kuka, first_room, second_room, third_room, fourth_room;
+		
   
     public:
 		SEARCH_OBJ(); 
 		void chooseinput();
 		void move(float x_des, float y_des, float w_des);
 		void run();
-       	//void turn();
+       	void rotate();
 		void check();
 		bool done = false;
-		int marker_id_des=0;
-		bool found = false;
 		bool center =false;
 		bool turned=false;
-		struct Coord kuka;
-		void markerMsgsCallback(const aruco_msgs::MarkerArray::ConstPtr &markerpoint);
-		aruco_msgs::MarkerArray marker_msg;
-
 		bool pubmark= false;
-		
-	};
+		void markerMsgsCallback(const aruco_msgs::MarkerArray::ConstPtr &markerpoint);
+		void reach_goal();
+};
 
 SEARCH_OBJ::SEARCH_OBJ(){
 	//ASSIGNING COORDINATES TO ROOMS
-struct Coord first_room ;
+
 		first_room.x=0.0;
 		first_room.y=0.0;
 		first_room.w=1.0;
 
-		struct Coord second_room;
 		second_room.x=-6.3;
 		second_room.y=0.0;
-		second_room.w=-3.0;
+		second_room.w=1.0;
 
-		struct Coord third_room;
 		third_room.x=-6.3;
 		third_room.y=3.0;
-		third_room.w=-1.0;
+		third_room.w=1.0;
 
-		struct Coord fourth_room;
 		fourth_room.x=0.0;
 		fourth_room.y=3.0;
 		fourth_room.w=1.0;
@@ -109,20 +105,27 @@ void SEARCH_OBJ::chooseinput() {
 			cout << "Turtlebot will search for the drill" << endl;
 			marker_id_des=35;
 	};
-
-	
 	return;
 }
 
-/*void SEARCH_OBJ::turn(){
-	while(<360)
-	gira;
-	if(pubmark)
-	break;
-	if(posa==360°)
-	turned=true;
+void SEARCH_OBJ::rotate(){
+	ros::Rate r(10);
+	_vel_pub = _nh.advertise<geometry_msgs::Twist >("turtlebot3/cmd_vel", 1);
+	cout << "Start rotation" << endl;
+	cmd_vel.angular.z = rot_vel;
+   	while(marker_msg.markers.size() == 0 ) {
+			_vel_pub.publish( cmd_vel );
+		
+				r.sleep();
+	}
+	pubmark=false;
+	if( marker_msg.markers[0].id==marker_id_des){	
+				reach_goal();
+				
+		}	
+		return;
 }
-*/
+
 void SEARCH_OBJ::move(float x_des, float y_des, float w_des){
 
 //tell the action client that we want to spin a thread by default
@@ -133,7 +136,7 @@ void SEARCH_OBJ::move(float x_des, float y_des, float w_des){
        ROS_INFO("Waiting for the move_base action server to come up");
      }  
 	 move_base_msgs::MoveBaseGoal goal;
-
+	 center=false;
      goal.target_pose.header.frame_id = "map";
      goal.target_pose.header.stamp = ros::Time::now();
    
@@ -149,53 +152,68 @@ void SEARCH_OBJ::move(float x_des, float y_des, float w_des){
      if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
        { ROS_INFO("Turtlebot is in the middle of the room");
 		center=true;
-	   }
+		if(goal.target_pose.pose.position.x==kuka.x && goal.target_pose.pose.position.y == kuka.y){
+				cout <<"end" <<endl;
+				exit(1);
+		}
+		 	
+		 }
      else
        ROS_INFO("The base failed to move for some reason");
 	return;
    
 }
 
-
+void SEARCH_OBJ::reach_goal()
+{
+ROS_INFO("Turtlebot found the tool, now it will reach Kuka Iiwa.");
+				//usleep(1000000);
+				move(kuka.x,kuka.y,kuka.w);	
+				return;
+}
 
 void SEARCH_OBJ::check(){
-
-	_marker_sub = _nh.subscribe("/aruco_marker_publisher/markers", 10, &SEARCH_OBJ::markerMsgsCallback, this);
-
 	
-	int i=0;
-		while (i<4){
+	_marker_sub = _nh.subscribe("/aruco_marker_publisher/markers", 10, &SEARCH_OBJ::markerMsgsCallback, this);
+	
+	
+		for (int i=0; i<4; i++){
+			  
        	 move(_room[i].x, _room[i].y, _room[i].w);
-		 
-	  	  if (center)
-		  pubmark=true;
-		   if( marker_msg.markers.size() > 0 ) 
+		 if (center){
+			marker_msg.markers.clear();
+			cout<< "valore size iniziale: " << marker_msg.markers.size() <<endl;
+	  		pubmark=true;
+			usleep(1000000);
+		    if(marker_msg.markers.size() > 0) 
        	     {
+				cout<<"valore dopo pubmark=true: " << marker_msg.markers.size() << endl;
+				pubmark=false;
 				if( marker_msg.markers[0].id==marker_id_des){	
-				ROS_INFO("Turtlebot found the tool, now it will reach Kuka Iiwa.");
-				found=true;
-				move(kuka.x,kuka.y,kuka.w);	
-				//cout << id <<endl;
+				reach_goal();
 				break;
 				}
-				else if( marker_msg.markers[0].id!=marker_id_des && turned)
-				i++;          
-         	   
-         	  }
-        	
-   		 }
-		 return;
+				}        
+        	else{
+				rotate();
+				}
+			
+		  }
+		}
+   		
+		return;
 	}
 
 void SEARCH_OBJ::markerMsgsCallback(const aruco_msgs::MarkerArray::ConstPtr &markerpoint){
 	if(pubmark){
 	marker_msg.markers = markerpoint -> markers;
-	//cout << marker_msg.markers[0].id << endl;
+	cout << marker_msg.markers[0].id << endl;
 	}
 }
 
 void SEARCH_OBJ::run() {
 	boost::thread check_t( &SEARCH_OBJ::check, this);
+	//boost::thread rotate_t(&SEARCH_OBJ::rotate,this);
 	//boost::thread move_t(&SEARCH_OBJ::move, this, x_des, y_des, w_des);
 	boost::thread markerMsgsCallback_t(&SEARCH_OBJ::markerMsgsCallback, this, markerpoint);
 	ros::spin();
