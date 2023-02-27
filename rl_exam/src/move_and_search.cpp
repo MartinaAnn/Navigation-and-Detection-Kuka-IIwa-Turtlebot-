@@ -20,17 +20,19 @@ class SEARCH_OBJ{
 			float w;
 		};
 		ros::NodeHandle _nh;
-	//	ros::Subscriber  _marker_sub;
+		ros::Subscriber  _marker_sub;
 		//vector<aruco_msgs::Marker> _marker;
-		//aruco_msgs::MarkerArray::Ptr _marker_msg;
+		const aruco_msgs::MarkerArray::ConstPtr markerpoint;
 		std::vector<Coord> _room;
+		int id_read;
+		float x_des, y_des, w_des;
   
     public:
 		SEARCH_OBJ(); 
 		void chooseinput();
+		void move(float x_des, float y_des, float w_des);
 		void run();
-        void move(float x_des, float y_des, float w_des);
-		//void turn();
+       	//void turn();
 		void check();
 		bool done = false;
 		int marker_id_des=0;
@@ -38,15 +40,15 @@ class SEARCH_OBJ{
 		bool center =false;
 		bool turned=false;
 		struct Coord kuka;
+		void markerMsgsCallback(const aruco_msgs::MarkerArray::ConstPtr &markerpoint);
+		aruco_msgs::MarkerArray marker_msg;
 
-	
-		//bool pubmark= _marker_pub.getNumSubscribers()>0;
-		//aruco_msgs::Marker marker_id;
-			
-
-};
+		bool pubmark= false;
+		
+	};
 
 SEARCH_OBJ::SEARCH_OBJ(){
+	//ASSIGNING COORDINATES TO ROOMS
 struct Coord first_room ;
 		first_room.x=0.0;
 		first_room.y=0.0;
@@ -108,7 +110,8 @@ void SEARCH_OBJ::chooseinput() {
 			marker_id_des=35;
 	};
 
-	done = true;	
+	//done = true;	
+	return;
 }
 
 /*void SEARCH_OBJ::turn(){
@@ -153,20 +156,23 @@ void SEARCH_OBJ::move(float x_des, float y_des, float w_des){
    
 }
 
+
+
 void SEARCH_OBJ::check(){
 
-	//_marker_sub = 
+	_marker_sub = _nh.subscribe("/aruco_marker_publisher/markers", 10, &SEARCH_OBJ::markerMsgsCallback, this);
 	//_marker_msg = aruco_msgs::MarkerArray::Ptr(new aruco_msgs::MarkerArray());
 	
-	//aruco_msgs::Marker & marker = _marker_msg->markers.at(_marker.size());
-    if(done==true) { 
+	
+   // if(done==true) { 
 		int i=0;
 		while (i<4){
        	 move(_room[i].x, _room[i].y, _room[i].w);
-		
+			//id_read=
 		 /* if(!pubmark){*/
-				if(center && i!=3/*&& turned*/)
-				i++;
+				if(center && i!=3/*&& turned*/) {
+				pubmark=true;
+				i++;}
 				/*else if (center && !turned)
 				turn();*/
 		/*  }*/
@@ -186,11 +192,20 @@ void SEARCH_OBJ::check(){
          	   
          	/*   }*/
         	
-   		 }
+   		// }
 	}
 }
+void SEARCH_OBJ::markerMsgsCallback(const aruco_msgs::MarkerArray::ConstPtr &markerpoint){
+	if(pubmark){
+	marker_msg.markers = markerpoint -> markers;
+	cout << marker_msg.markers[0].id << endl;
+	}
+}
+
 void SEARCH_OBJ::run() {
 	boost::thread check_t( &SEARCH_OBJ::check, this);
+	boost::thread move_t(&SEARCH_OBJ::move, this, x_des, y_des, w_des);
+	boost::thread markerMsgsCallback_t(&SEARCH_OBJ::markerMsgsCallback, this, markerpoint);
 	ros::spin();
 }
 
@@ -200,7 +215,6 @@ int main(int argc, char** argv ) {
 	ros::init(argc, argv, "search_obj"); //node name
 
 	SEARCH_OBJ so;
-
 	so.chooseinput();
 	so.run();
 	return 0;
