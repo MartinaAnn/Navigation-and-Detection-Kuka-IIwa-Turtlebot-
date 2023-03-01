@@ -174,7 +174,7 @@
   </link>
   
   <!--LASER SENSOR-->
-  <gazebo reference="base_footprint">
+  <gazebo reference="base_scan">
         <sensor type="ray" name="laser">
         <pose>0 0 0.1 0 0 0</pose>
         <visualize>true</visualize>
@@ -205,7 +205,7 @@
         </ray>
         <plugin name="gazebo_ros_head_hokuyo_controller" filename="libgazebo_ros_laser.so">
           <topicName>/laser/scan</topicName>
-          <frameName>base_footprint</frameName>
+          <frameName>base_scan</frameName>
         </plugin>
       </sensor>
 

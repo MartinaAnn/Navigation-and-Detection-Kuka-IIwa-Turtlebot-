@@ -55,19 +55,19 @@ SEARCH_OBJ::SEARCH_OBJ(){
 
 		second_room.x=-6.3;
 		second_room.y=0.0;
-		second_room.w=1.0;
+		second_room.w=0.2;
 
 		third_room.x=-6.3;
 		third_room.y=3.0;
-		third_room.w=1.0;
+		third_room.w=-1.0;
 
 		fourth_room.x=0.0;
 		fourth_room.y=3.0;
 		fourth_room.w=1.0;
 
 		kuka.x=-3.0;
-		kuka.y=5.5;
-		kuka.w=1.0;
+		kuka.y=5.8;
+		kuka.w=0.5;
 
 		//CREATING A VECTOR OF ROOMS
 

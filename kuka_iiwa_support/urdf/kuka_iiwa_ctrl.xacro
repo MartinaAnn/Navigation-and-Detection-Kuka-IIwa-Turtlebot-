@@ -6,9 +6,11 @@
 
   <xacro:arg name="robot_name" default="iiwa"/>
 
-	<link name="world"/>
-  <xacro:iiwa7 robot_name="$(arg robot_name)" parent="world">
+	<link name="base"/>
+  <xacro:iiwa7 robot_name="$(arg robot_name)" parent="base">
     <origin xyz="0 0 0" rpy="0 0 0" />
   </xacro:iiwa7>
+  
+  
 
 </robot>
