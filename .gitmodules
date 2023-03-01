@@ -1,0 +1,3 @@
+[submodule "aruco_ros"]
+	path = aruco_ros
+	url = https://github.com/rl2022/aruco_ros.git
