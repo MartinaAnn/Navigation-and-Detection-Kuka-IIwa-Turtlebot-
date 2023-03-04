@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   urdf
   xacro
+  kdl_parser
 )
 
 ## System dependencies are found with CMake's conventions
@@ -121,6 +122,9 @@ include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
 )
+
+add_executable(kuka_invkin_ctrl src/kuka_invkin_ctrl.cpp)
+target_link_libraries(kuka_invkin_ctrl ${catkin_LIBRARIES} )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}

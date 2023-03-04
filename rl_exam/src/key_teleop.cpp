@@ -4,7 +4,7 @@
 
 using namespace std;
 
-#define LIN_VEL 0.8
+#define LIN_VEL 0.5
 #define ANG_VEL 0.8
 
 
@@ -27,7 +27,7 @@ class KEY_CTRL {
 
 
 KEY_CTRL::KEY_CTRL() {	
-	_vel_pub = _nh.advertise< geometry_msgs::Twist >("/cmd_vel", 1);
+	_vel_pub = _nh.advertise< geometry_msgs::Twist >("/turtlebot3/cmd_vel", 1);
 	_fv = _rv = 0.0;
 }
 

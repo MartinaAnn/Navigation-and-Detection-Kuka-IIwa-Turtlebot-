@@ -21,7 +21,7 @@
     <arg name="headless" value="$(arg headless)"/>
   </include>
    
-  <!-- SPawn the two models -->
+  <!-- Spawn the two models -->
   <group ns="kuka_iiwa">
     <include file="$(find rl_exam)/launch/kuka_spawn.launch">
         <arg name="robot_name" value="kuka_iiwa"/>
@@ -36,12 +36,12 @@
 
   <!-- RVIZ -->
   <node name="rviz" pkg="rviz" type="rviz"  args="-d $(find rl_exam)/conf/rviz_config.rviz" /> 
-  <node pkg="tf" name="kuka_to_world" type="static_transform_publisher" args="3.06 -6.26 0 0 0 0 base world 100" />
+<node pkg="tf" name="world_to_map" type="static_transform_publisher" args="3.06 -6.26 0 0 0 0 world map 100" />
   
 <!--  Map server -->
   <arg name="map_file" default="$(find rl_exam)/maps/my_map.yaml" />
   <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
- <node pkg="tf" name="world_to_map" type="static_transform_publisher" args="0 0 0 0 0 0 world map 100" />
+
 
  <!-- AMCL --> 
   <include file="$(find rl_exam)/launch/amcl_turtlebot3.launch">
@@ -51,8 +51,6 @@
  <!--MOVE BASE -->   
   <include file="$(find rl_exam)/launch/move_base.launch"/> 
   
-  <!-- CONTROLLER -->
-  <include file="$(find rl_exam)/launch/kuka_control.launch"/>
-  
+
 
 </launch>

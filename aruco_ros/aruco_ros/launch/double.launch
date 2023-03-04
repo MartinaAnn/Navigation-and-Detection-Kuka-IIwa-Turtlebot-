@@ -1,0 +1,45 @@
+<?xml version="1.0" ?>
+<launch>
+
+    <arg name="marker1Id"         default="16"/>
+    <arg name="marker2Id"         default="19"/>
+    <arg name="marker3Id"         default="24"/>
+    <arg name="marker4Id"         default="32"/>
+    <arg name="marker5Id"         default="35"/>
+    <arg name="markerSize"        default="0.08"/>    <!-- in m -->
+    <arg name="eye"               default="left"/>
+    <arg name="dct_normalization" default="True" />
+    <arg name="dct_filter_size"   default="2" />
+    <arg name="marker1_frame"     default="aruco_marker_frame" />
+    <arg name="marker2_frame"     default="aruco_marker_frame" />
+    <arg name="marker3_frame"     default="aruco_marker_frame" />
+    <arg name="marker4_frame"     default="aruco_marker_frame" />
+    <arg name="marker5_frame"     default="aruco_marker_frame" />
+    <arg name="camera_frame"    default="camera_link"/>
+    <arg name="corner_refinement" default="HARRIS" /> <!-- NONE, HARRIS, LINES, SUBPIX -->
+
+
+
+    <node pkg="aruco_ros" type="marker_publisher" name="aruco_simple">    
+        <remap from="/camera_info" to="/turtlebot3/camera/camera_info" />
+        <remap from="/image" to="/turtlebot3/camera/image_raw" />
+        <param name="image_is_rectified" value="True"/>
+        <param name="marker_size" value="$(arg markerSize)"/>
+        <param name="marker_id1" value="$(arg marker1Id)"/>
+        <param name="marker_id2" value="$(arg marker2Id)"/>
+        <param name="marker_id3" value="$(arg marker3Id)"/>
+        <param name="marker_id4" value="$(arg marker4Id)"/>
+        <param name="marker_id5" value="$(arg marker5Id)"/>
+        <param name="normalizeImage" value="$(arg dct_normalization)"/>
+        <param name="dct_components_to_remove" value="$(arg dct_filter_size)"/>
+        <param name="parent_name" value="stereo_gazebo_$(arg eye)_camera_optical_frame"/>
+        <param name="child_name1" value="$(arg marker1_frame)" />
+        <param name="child_name2" value="$(arg marker2_frame)" />
+        <param name="child_name3" value="$(arg marker3_frame)" />
+        <param name="child_name4" value="$(arg marker4_frame)" />
+        <param name="child_name5" value="$(arg marker5_frame)" />
+        <param name="corner_refinement"  value="$(arg corner_refinement)" />
+    </node>
+
+</launch>
+

@@ -8,15 +8,29 @@
 
     <!--  ******************** Robot Model ********************  -->
          <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
+         		
+	<!--	<remap from="/joint_states" to="kuka_iiwa/joint_states" /> -->
    </node>
+      <!--  <node pkg="joint_state_publisher" type="joint_state_publisher" name="joint_state_publisher">
+         <remap from="/joint_states" to="kuka_iiwa/joint_states" />
+   </node>  -->
 
-    <param name="robot_description" command="$(find xacro)/xacro '$(find kuka_iiwa_support)/urdf/kuka_iiwa_ctrl.xacro'"/>
+    <param name="robot_description" textfile="$(find kuka_iiwa_support)/urdf/kuka_iiwa_ctrl_generated.urdf"/>
     
 
     <node pkg="gazebo_ros" type="spawn_model" name="spawn_$(arg robot_name)" respawn="false" output="screen"
         args="-urdf -model kuka_iiwa_ctrl -param robot_description -x $(arg x) -y $(arg y) -z $(arg z)">
     </node>
-   
 
-    
+    <rosparam file="$(find kuka_iiwa_support)/conf/kuka_iiwa_controller.yaml" command="load"/>
+	
+<node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args=" joint_state_controller joint1_position_controller
+		joint2_position_controller
+		joint3_position_controller
+		joint4_position_controller
+		joint5_position_controller
+		joint6_position_controller
+		joint7_position_controller" /> 
+
+  
 </launch>

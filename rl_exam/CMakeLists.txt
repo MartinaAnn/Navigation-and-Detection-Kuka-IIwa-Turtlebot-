@@ -20,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
   gazebo_ros_control
   geometry_msgs
   interactive_markers
+  kdl_parser
   moveit_core
   moveit_ros_perception
   moveit_ros_planning_interface
@@ -145,6 +146,7 @@ target_link_libraries(key_teleop ${catkin_LIBRARIES} )
 
 add_executable(move_and_search src/move_and_search.cpp)
 target_link_libraries(move_and_search ${catkin_LIBRARIES} )
+
 
 include (FindPkgConfig)
 if (PKG_CONFIG_FOUND)
