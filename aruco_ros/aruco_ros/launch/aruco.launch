@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 
 <launch>
-    <arg name="markerId"        default="16"/>
+    <arg name="markerId"        default="35"/>
     <arg name="markerSize"      default="0.08"/>    <!-- in m -->
     <arg name="eye"             default=""/>
     <arg name="marker_frame"    default="marker_frame"/>
@@ -11,8 +11,8 @@
 
 
     <node pkg="aruco_ros" type="single" name="simple_single">
-        <remap from="/camera_info" to="/turtlebot3/camera/camera_info" />
-        <remap from="/image" to="/turtlebot3/camera/image_raw" />
+        <remap from="/camera_info" to="/kuka_iiwa/camera/camera_info" />
+        <remap from="/image" to="/kuka_iiwa/camera/image_raw" />
         <param name="image_is_rectified" value="True"/>
         <param name="marker_size"        value="$(arg markerSize)"/>
         <param name="marker_id"          value="$(arg markerId)"/>
