@@ -263,10 +263,10 @@
   </link>
   <joint name="camera_joint" type="fixed">
     <parent link="iiwa_link_7"/>
-    <child link="camera_link"/>
+    <child link="kuka_iiwa/camera_link"/>
     <origin rpy="0 -1.57 0" xyz="0 0 0.16"/>
   </joint>
-  <link name="camera_link"/>
+  <link name="kuka_iiwa/camera_link"/>
   <joint name="iiwa_joint_ee" type="fixed">
     <parent link="iiwa_link_7"/>
     <child link="iiwa_link_ee"/>
@@ -373,7 +373,7 @@
     <material>Gazebo/Grey</material>
   </gazebo>
   <!-- CAMERA SENSOR -->
-  <gazebo reference="camera_link">
+  <gazebo reference="kuka_iiwa/camera_link">
     <sensor name="camera" type="camera">
       <update_rate>30.0</update_rate>
       <camera>
@@ -399,7 +399,7 @@
         <cameraName>camera</cameraName>
         <imageTopicName>/kuka_iiwa/camera/image_raw</imageTopicName>
         <cameraInfoTopicName>/kuka_iiwa/camera/camera_info</cameraInfoTopicName>
-        <frameName>camera_link</frameName>
+        <frameName>kuka_iiwa/camera_link</frameName>
         <hackBaseline>0.07</hackBaseline>
         <distortionK1>0.0</distortionK1>
         <distortionK2>0.0</distortionK2>

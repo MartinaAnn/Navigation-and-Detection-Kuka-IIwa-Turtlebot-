@@ -1,8 +1,10 @@
 #include "ros/ros.h"
 #include "boost/thread.hpp"
 #include "sensor_msgs/JointState.h"
-#include "geometry_msgs/Pose.h"
+#include "geometry_msgs/PoseStamped.h"
 #include <std_msgs/Float64.h>
+#include <aruco/aruco.h>
+#include <aruco_msgs/Marker.h>
 
 #include <kdl_parser/kdl_parser.hpp>
 #include <kdl/chainfksolverpos_recursive.hpp>
@@ -14,6 +16,29 @@ using namespace std;
 
 
 class KUKA_INVKIN {
+
+		private:
+		ros::NodeHandle _nh;
+		ros::Subscriber _js_sub;
+		ros::Publisher _cartpose_pub;
+		ros::Publisher _cmd_pub[7];
+		ros::Subscriber _marker_sub;
+		
+		KDL::Tree iiwa_tree;
+		KDL::ChainFkSolverPos_recursive *_fksolver; //Forward position solver	
+		KDL::ChainIkSolverVel_pinv *_ik_solver_vel;   	//Inverse velocity solver
+		KDL::ChainIkSolverPos_NR *_ik_solver_pos;
+		KDL::Chain _k_chain;
+		KDL::JntArray *_q_in;
+		KDL::Frame _p_out;
+		
+		bool _first_js;
+		bool _first_fk;
+		geometry_msgs::PoseStamped _marker_pose; //possibile che il controllo possa essere fatto con questo
+		const geometry_msgs::PoseStamped::ConstPtr markerpose;
+		std::vector<geometry_msgs::PoseStamped> check_size_marker;
+		bool seemarker=false;
+		
 	public:
 		KUKA_INVKIN();
 		void run();
@@ -22,24 +47,8 @@ class KUKA_INVKIN {
 		void joint_states_cb( sensor_msgs::JointState );
 		void ctrl_loop();
 		void goto_initial_position( float dp[7] );
-
-	private:
-		ros::NodeHandle _nh;
-		KDL::Tree iiwa_tree;
-	
-		KDL::ChainFkSolverPos_recursive *_fksolver; //Forward position solver	
-		KDL::ChainIkSolverVel_pinv *_ik_solver_vel;   	//Inverse velocity solver
-		KDL::ChainIkSolverPos_NR *_ik_solver_pos;
-
-		KDL::Chain _k_chain;
-	
-		ros::Subscriber _js_sub;
-		ros::Publisher _cartpose_pub;
-		KDL::JntArray *_q_in;
-		bool _first_js;
-		bool _first_fk;
-		ros::Publisher _cmd_pub[7];
-		KDL::Frame _p_out;
+		void approaching();
+		void markerPoseCallback(const geometry_msgs::PoseStamped::ConstPtr &markerpose);
 };
 
 
@@ -84,6 +93,8 @@ KUKA_INVKIN::KUKA_INVKIN() {
 
 	_first_js = false;
 	_first_fk = false;
+	
+	_marker_sub = _nh.subscribe("simple_single/pose",10, &KUKA_INVKIN::markerPoseCallback,this);
 }
 
 
@@ -118,6 +129,7 @@ void KUKA_INVKIN::goto_initial_position( float dp[7] ) {
 
 	sleep(2);
 }
+
 
 
 void KUKA_INVKIN::get_dirkin() {
@@ -155,57 +167,78 @@ void KUKA_INVKIN::get_dirkin() {
 }
 
 
+void KUKA_INVKIN::approaching(){
+
+}
 
 void KUKA_INVKIN::ctrl_loop() {
 
 	std_msgs::Float64 d;
 	
-
+	seemarker=false;
 	while( !_first_fk ) usleep(0.1);
 	
 	float i_cmd[7];
-	i_cmd[0] = 0.0;
-	i_cmd[1] = i_cmd[2] = i_cmd[4] = i_cmd[6] = 0.0;
-	i_cmd[3] = 1.57;
-	i_cmd[5] = -1.57;
+	i_cmd[0] = -1.57;
+	i_cmd[1] = i_cmd[4] = i_cmd[2] = i_cmd[6] = 0.0;
+	i_cmd[3] = -1.57;
+	i_cmd[5] = 1.57;
 	goto_initial_position( i_cmd );
 
+	//ros::Rate r(50);
 	
-	ros::Rate r(50);
-
-	KDL::Frame F_dest;
+	KDL::Frame F_dest; //ha un campo posizione p e uno orientamento M
 	KDL::JntArray q_out(_k_chain.getNrOfJoints());
 
 
-	F_dest.p.data[0] = _p_out.p.x() - 0.2;
+	F_dest.p.data[0] = _p_out.p.x();
 	F_dest.p.data[1] = _p_out.p.y();
-	F_dest.p.data[2] = _p_out.p.z() - 0.1;
+	F_dest.p.data[2] = _p_out.p.z();
+	
 
 	for(int i=0; i<9; i++ )
 		F_dest.M.data[i] = _p_out.M.data[i];
 
 	std_msgs::Float64 cmd[7];
-	while( ros::ok() ) {		
+	usleep(1000000);
+	
+	if(check_size_marker.size()==0) {		
 
 		if( _ik_solver_pos->CartToJnt(*_q_in, F_dest, q_out) != KDL::SolverI::E_NOERROR ) 
 			cout << "failing in ik!" << endl;
 
 		for(int i=0; i<7; i++) {
-			cmd[i].data = q_out.data[i];
+			cmd[i].data = q_out.data[i]; 
 		}
-		for(int i=0; i<7; i++) {
+		for(int i=1; i<7; i++) {
 			_cmd_pub[i].publish (cmd[i]);
 		}
-
-		r.sleep();
 	}
-
-
+	cout<<"Kuka took the object, now it will place it."<<endl;
+	float step=0.2;
+	seemarker=true;
+	while(check_size_marker.size()==0){
+	cmd[0].data=cmd[0].data+step;
+	_cmd_pub[0].publish (cmd[0]);
+	usleep(100000);
+	}
+	seemarker=false;
 }
 
 
-void KUKA_INVKIN::run() {
+void KUKA_INVKIN::markerPoseCallback(const geometry_msgs::PoseStamped::ConstPtr &markerpose){
+	if(seemarker){
+	seemarker=false;
+	check_size_marker.push_back(*markerpose);
+	cout<<"size marker array: " << check_size_marker.size() <<endl;
+	_marker_pose.pose= markerpose -> pose;
+	cout<<"marker array: " << _marker_pose.pose <<endl;
+	}
+	//seemarker=false;
+}
 
+void KUKA_INVKIN::run() {
+	boost::thread markerPoseCallback_t(&KUKA_INVKIN::markerPoseCallback, this, markerpose);
 	boost::thread get_dirkin_t( &KUKA_INVKIN::get_dirkin, this);
 	boost::thread ctrl_loop_t ( &KUKA_INVKIN::ctrl_loop, this);
 	ros::spin();	

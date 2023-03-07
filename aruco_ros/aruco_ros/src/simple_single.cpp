@@ -136,8 +136,8 @@ public:
     marker_pub = nh.advertise<visualization_msgs::Marker>("marker", 10);
     pixel_pub = nh.advertise<geometry_msgs::PointStamped>("pixel", 10);
 
-    nh.param<double>("marker_size", marker_size, 0.05);
-    nh.param<int>("marker_id", marker_id, 300);
+    nh.param<double>("marker_size", marker_size, 0.08);
+    nh.param<int>("marker_id", marker_id, 35);
     nh.param<std::string>("reference_frame", reference_frame, "");
     nh.param<std::string>("camera_frame", camera_frame, "");
     nh.param<std::string>("marker_frame", marker_frame, "");
@@ -334,7 +334,7 @@ public:
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "aruco_simple");
+  ros::init(argc, argv, "simple_single");
 
   ArucoSimple node;
 

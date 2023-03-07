@@ -167,7 +167,7 @@ void SEARCH_OBJ::move(float x_des, float y_des, float w_des){
 void SEARCH_OBJ::reach_goal()
 {
 ROS_INFO("Turtlebot found the tool, now it will reach Kuka Iiwa.");
-				//usleep(1000000);
+				usleep(1000000);
 				move(kuka.x,kuka.y,kuka.w);	
 				return;
 }
