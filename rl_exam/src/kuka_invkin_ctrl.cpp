@@ -23,6 +23,8 @@ class KUKA_INVKIN {
 		ros::Publisher _cartpose_pub;
 		ros::Publisher _cmd_pub[7];
 		ros::Subscriber _marker_sub;
+		ros::Subscriber _ee_sub;
+		sensor_msgs::JointState js;
 		
 		KDL::Tree iiwa_tree;
 		KDL::ChainFkSolverPos_recursive *_fksolver; //Forward position solver	
@@ -32,12 +34,20 @@ class KUKA_INVKIN {
 		KDL::JntArray *_q_in;
 		KDL::Frame _p_out;
 		
+			geometry_msgs::Pose cpose;
+		
+		
 		bool _first_js;
 		bool _first_fk;
 		geometry_msgs::PoseStamped _marker_pose; //possibile che il controllo possa essere fatto con questo
+		geometry_msgs::Pose _eef_pose;
 		const geometry_msgs::PoseStamped::ConstPtr markerpose;
+	
 		std::vector<geometry_msgs::PoseStamped> check_size_marker;
-		bool seemarker=false;
+		bool seemarker;
+		
+		KDL::Frame goal;
+		
 		
 	public:
 		KUKA_INVKIN();
@@ -47,8 +57,9 @@ class KUKA_INVKIN {
 		void joint_states_cb( sensor_msgs::JointState );
 		void ctrl_loop();
 		void goto_initial_position( float dp[7] );
-		void approaching();
+		void approaching(KDL::Frame goal);
 		void markerPoseCallback(const geometry_msgs::PoseStamped::ConstPtr &markerpose);
+		
 };
 
 
@@ -82,6 +93,7 @@ KUKA_INVKIN::KUKA_INVKIN() {
  
 	_cartpose_pub = _nh.advertise<geometry_msgs::Pose>("/kuka_iiwa/eef_pose", 0);
 	_js_sub = _nh.subscribe("/kuka_iiwa/joint_states", 0, &KUKA_INVKIN::joint_states_cb, this);
+
 	
 	_cmd_pub[0] = _nh.advertise< std_msgs::Float64 > ("/kuka_iiwa/joint1_position_controller/command", 0);
 	_cmd_pub[1] = _nh.advertise< std_msgs::Float64 > ("/kuka_iiwa/joint2_position_controller/command", 0);
@@ -93,9 +105,13 @@ KUKA_INVKIN::KUKA_INVKIN() {
 
 	_first_js = false;
 	_first_fk = false;
+	seemarker=false;
 	
 	_marker_sub = _nh.subscribe("simple_single/pose",10, &KUKA_INVKIN::markerPoseCallback,this);
+
 }
+
+
 
 
 void KUKA_INVKIN::joint_states_cb( sensor_msgs::JointState js ) {
@@ -135,7 +151,7 @@ void KUKA_INVKIN::goto_initial_position( float dp[7] ) {
 void KUKA_INVKIN::get_dirkin() {
 
 	ros::Rate r(50);
-	geometry_msgs::Pose cpose;
+
 
 	KDL::JntArray q_curr(_k_chain.getNrOfJoints());
 
@@ -167,8 +183,29 @@ void KUKA_INVKIN::get_dirkin() {
 }
 
 
-void KUKA_INVKIN::approaching(){
+void KUKA_INVKIN::approaching(KDL::Frame goal){
 
+
+KDL::JntArray q_out(_k_chain.getNrOfJoints());
+_fksolver->JntToCart(*_q_in, _p_out);
+goal.p.data[0]=_p_out.p.x();
+goal.p.data[1]=_p_out.p.y();
+goal.p.data[2]=_p_out.p.z();
+
+std_msgs::Float64 cmd[7];
+while(ros::ok){
+if( _ik_solver_pos->CartToJnt(*_q_in, goal, q_out) != KDL::SolverI::E_NOERROR ) 
+		cout << "failing in ik!" << endl;
+
+	for(int i=0; i<7; i++) {
+		cmd[i].data = q_out.data[i]; 
+	}
+	for(int i=1; i<7; i++) {
+		_cmd_pub[i].publish (cmd[i]);
+	}
+	}
+
+cout<< "cpose.position.x" <<cpose.position.x<<endl;
 }
 
 void KUKA_INVKIN::ctrl_loop() {
@@ -202,27 +239,29 @@ void KUKA_INVKIN::ctrl_loop() {
 	std_msgs::Float64 cmd[7];
 	usleep(1000000);
 	
-	if(check_size_marker.size()==0) {		
+	if( _ik_solver_pos->CartToJnt(*_q_in, F_dest, q_out) != KDL::SolverI::E_NOERROR ) 
+		cout << "failing in ik!" << endl;
 
-		if( _ik_solver_pos->CartToJnt(*_q_in, F_dest, q_out) != KDL::SolverI::E_NOERROR ) 
-			cout << "failing in ik!" << endl;
-
-		for(int i=0; i<7; i++) {
-			cmd[i].data = q_out.data[i]; 
-		}
-		for(int i=1; i<7; i++) {
-			_cmd_pub[i].publish (cmd[i]);
-		}
+	for(int i=0; i<7; i++) {
+		cmd[i].data = q_out.data[i]; 
+	}
+	for(int i=1; i<7; i++) {
+		_cmd_pub[i].publish (cmd[i]);
 	}
 	cout<<"Kuka took the object, now it will place it."<<endl;
 	float step=0.2;
 	seemarker=true;
 	while(check_size_marker.size()==0){
-	cmd[0].data=cmd[0].data+step;
-	_cmd_pub[0].publish (cmd[0]);
-	usleep(100000);
+		cmd[0].data=cmd[0].data+step;
+		_cmd_pub[0].publish (cmd[0]);
+		usleep(100000);
 	}
 	seemarker=false;
+	if(check_size_marker.size()!=0){
+	_first_js=false;
+		approaching(F_dest);
+	
+	}
 }
 
 
@@ -230,12 +269,13 @@ void KUKA_INVKIN::markerPoseCallback(const geometry_msgs::PoseStamped::ConstPtr 
 	if(seemarker){
 	seemarker=false;
 	check_size_marker.push_back(*markerpose);
-	cout<<"size marker array: " << check_size_marker.size() <<endl;
+	//cout<<"size marker array: " << check_size_marker.size() <<endl;
 	_marker_pose.pose= markerpose -> pose;
-	cout<<"marker array: " << _marker_pose.pose <<endl;
+	cout<<"marker array: " << _marker_pose.pose.position <<endl;
 	}
-	//seemarker=false;
 }
+
+
 
 void KUKA_INVKIN::run() {
 	boost::thread markerPoseCallback_t(&KUKA_INVKIN::markerPoseCallback, this, markerpose);

@@ -136,7 +136,7 @@ public:
     marker_pub = nh.advertise<visualization_msgs::Marker>("marker", 10);
     pixel_pub = nh.advertise<geometry_msgs::PointStamped>("pixel", 10);
 
-    nh.param<double>("marker_size", marker_size, 0.08);
+    nh.param<double>("marker_size", marker_size, 0.12);
     nh.param<int>("marker_id", marker_id, 35);
     nh.param<std::string>("reference_frame", reference_frame, "");
     nh.param<std::string>("camera_frame", camera_frame, "");
@@ -252,7 +252,7 @@ public:
             // publish rviz marker representing the ArUco marker patch
             visualization_msgs::Marker visMarker;
             visMarker.header = transformMsg.header;
-            visMarker.id = 1;
+            visMarker.id = 35;
             visMarker.type = visualization_msgs::Marker::CUBE;
             visMarker.action = visualization_msgs::Marker::ADD;
             visMarker.pose = poseMsg.pose;
