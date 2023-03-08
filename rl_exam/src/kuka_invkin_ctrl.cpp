@@ -5,7 +5,6 @@
 #include <std_msgs/Float64.h>
 #include <aruco/aruco.h>
 #include <aruco_msgs/Marker.h>
-
 #include <kdl_parser/kdl_parser.hpp>
 #include <kdl/chainfksolverpos_recursive.hpp>
 #include <kdl/chainiksolvervel_pinv.hpp>
@@ -188,12 +187,21 @@ void KUKA_INVKIN::approaching(KDL::Frame goal){
 
 KDL::JntArray q_out(_k_chain.getNrOfJoints());
 _fksolver->JntToCart(*_q_in, _p_out);
-goal.p.data[0]=_p_out.p.x();
-goal.p.data[1]=_p_out.p.y();
-goal.p.data[2]=_p_out.p.z();
+if(_marker_pose.pose.position.x<cpose.position.x)
+goal.p.data[0]=cpose.position.x-_marker_pose.pose.position.x;
+else
+goal.p.data[0]=cpose.position.x+_marker_pose.pose.position.x;
+if(_marker_pose.pose.position.y<cpose.position.y)	
+	goal.p.data[1]=cpose.position.y-_marker_pose.pose.position.y;
+else 
+	goal.p.data[1]=cpose.position.y+_marker_pose.pose.position.y;
+
+goal.p.data[2]=cpose.position.z-_marker_pose.pose.position.z;
+
+cout<< "cpose.position before: " <<cpose.position<<endl;
 
 std_msgs::Float64 cmd[7];
-while(ros::ok){
+
 if( _ik_solver_pos->CartToJnt(*_q_in, goal, q_out) != KDL::SolverI::E_NOERROR ) 
 		cout << "failing in ik!" << endl;
 
@@ -203,9 +211,9 @@ if( _ik_solver_pos->CartToJnt(*_q_in, goal, q_out) != KDL::SolverI::E_NOERROR )
 	for(int i=1; i<7; i++) {
 		_cmd_pub[i].publish (cmd[i]);
 	}
-	}
 
-cout<< "cpose.position.x" <<cpose.position.x<<endl;
+
+cout<< "cpose.position after: " <<cpose.position<<endl;
 }
 
 void KUKA_INVKIN::ctrl_loop() {
@@ -251,11 +259,22 @@ void KUKA_INVKIN::ctrl_loop() {
 	cout<<"Kuka took the object, now it will place it."<<endl;
 	float step=0.2;
 	seemarker=true;
-	while(check_size_marker.size()==0){
+	
+	while(check_size_marker.size()==0&&cmd[0].data<2.96){
 		cmd[0].data=cmd[0].data+step;
 		_cmd_pub[0].publish (cmd[0]);
 		usleep(100000);
 	}
+	cout <<"cmd[0].data: "<<cmd[0].data;
+	if(cmd[0].data>2.96&&check_size_marker.size()==0){
+	cout<<"in if" << endl;
+		while(check_size_marker.size()==0){
+		cmd[0].data=cmd[0].data-step;
+		_cmd_pub[0].publish (cmd[0]);
+		usleep(100000);
+		}
+	}
+	
 	seemarker=false;
 	if(check_size_marker.size()!=0){
 	_first_js=false;
