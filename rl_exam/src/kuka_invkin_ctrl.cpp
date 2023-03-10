@@ -4,6 +4,7 @@
 #include "geometry_msgs/PoseStamped.h"
 #include <std_msgs/Float64.h>
 #include <aruco/aruco.h>
+#include <cstdlib>
 #include <aruco_msgs/Marker.h>
 #include <kdl_parser/kdl_parser.hpp>
 #include <kdl/chainfksolverpos_recursive.hpp>
@@ -38,7 +39,7 @@ class KUKA_INVKIN {
 		
 		bool _first_js;
 		bool _first_fk;
-		geometry_msgs::PoseStamped _marker_pose; //possibile che il controllo possa essere fatto con questo
+		geometry_msgs::PoseStamped _marker_pose; 
 		geometry_msgs::Pose _eef_pose;
 		const geometry_msgs::PoseStamped::ConstPtr markerpose;
 	
@@ -187,18 +188,36 @@ void KUKA_INVKIN::approaching(KDL::Frame goal){
 
 KDL::JntArray q_out(_k_chain.getNrOfJoints());
 _fksolver->JntToCart(*_q_in, _p_out);
-if(_marker_pose.pose.position.x<cpose.position.x)
-goal.p.data[0]=cpose.position.x-_marker_pose.pose.position.x;
-else
-goal.p.data[0]=cpose.position.x+_marker_pose.pose.position.x;
-if(_marker_pose.pose.position.y<cpose.position.y)	
-	goal.p.data[1]=cpose.position.y-_marker_pose.pose.position.y;
-else 
-	goal.p.data[1]=cpose.position.y+_marker_pose.pose.position.y;
+cout<<"marker array: " << _marker_pose.pose.position <<endl;
+cout <<"kuka pose x: "	<< _p_out.p.x()  << " y: "<< _p_out.p.y()<< " z: "<<_p_out.p.z() <<endl ;
 
-goal.p.data[2]=cpose.position.z-_marker_pose.pose.position.z;
+//CHOOSE X
+if(_marker_pose.pose.position.x>0 &&  _p_out.p.x()>0)
+goal.p.data[0]= _p_out.p.x()+_marker_pose.pose.position.x;
+else if (_marker_pose.pose.position.x<0 &&  _p_out.p.x()<0)
+goal.p.data[0]= _p_out.p.x()-abs(_marker_pose.pose.position.x);
+else if(_marker_pose.pose.position.x>0 &&  _p_out.p.x()<0 && abs(_p_out.p.x()<0)<_marker_pose.pose.position.x)
+goal.p.data[0]= abs(_p_out.p.x())+_marker_pose.pose.position.x;
+else if(_marker_pose.pose.position.x>0 &&  _p_out.p.x()<0 && abs(_p_out.p.x()<0)>_marker_pose.pose.position.x)
+goal.p.data[0]= _p_out.p.x()-_marker_pose.pose.position.x;
+else if (_marker_pose.pose.position.x<0 &&  _p_out.p.x()>0)
+goal.p.data[0]= _p_out.p.x()+abs(_marker_pose.pose.position.x);
 
-cout<< "cpose.position before: " <<cpose.position<<endl;
+//CHOOSE Y
+
+if(_marker_pose.pose.position.y>0 && _p_out.p.y()>0)
+goal.p.data[1]=_p_out.p.y()-_marker_pose.pose.position.y;
+else if (_marker_pose.pose.position.y<0 && _p_out.p.y()<0)
+goal.p.data[1]=_p_out.p.y()-abs(_marker_pose.pose.position.y);
+else if(_marker_pose.pose.position.y>0 && _p_out.p.y()<0)
+goal.p.data[1]=abs(_p_out.p.y())+_marker_pose.pose.position.y;
+else if (_marker_pose.pose.position.y<0 && _p_out.p.y()>0)
+goal.p.data[1]=_p_out.p.y()-abs(_marker_pose.pose.position.y);
+
+//Z
+//goal.p.data[0]=_marker_pose.pose.position.x;
+//goal.p.data[1]=_marker_pose.pose.position.y;
+goal.p.data[2]=_p_out.p.z()-_marker_pose.pose.position.z;
 
 std_msgs::Float64 cmd[7];
 
@@ -212,8 +231,6 @@ if( _ik_solver_pos->CartToJnt(*_q_in, goal, q_out) != KDL::SolverI::E_NOERROR )
 		_cmd_pub[i].publish (cmd[i]);
 	}
 
-
-cout<< "cpose.position after: " <<cpose.position<<endl;
 }
 
 void KUKA_INVKIN::ctrl_loop() {
@@ -265,7 +282,6 @@ void KUKA_INVKIN::ctrl_loop() {
 		_cmd_pub[0].publish (cmd[0]);
 		usleep(100000);
 	}
-	cout <<"cmd[0].data: "<<cmd[0].data;
 	if(cmd[0].data>2.96&&check_size_marker.size()==0){
 	cout<<"in if" << endl;
 		while(check_size_marker.size()==0){
@@ -290,7 +306,7 @@ void KUKA_INVKIN::markerPoseCallback(const geometry_msgs::PoseStamped::ConstPtr 
 	check_size_marker.push_back(*markerpose);
 	//cout<<"size marker array: " << check_size_marker.size() <<endl;
 	_marker_pose.pose= markerpose -> pose;
-	cout<<"marker array: " << _marker_pose.pose.position <<endl;
+	
 	}
 }
 
