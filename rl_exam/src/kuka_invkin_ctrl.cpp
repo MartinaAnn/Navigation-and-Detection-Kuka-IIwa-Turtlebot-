@@ -1,4 +1,7 @@
 #include "ros/ros.h"
+#include "rl_exam/service.h"
+#include <iostream>
+#include <sstream>
 #include "boost/thread.hpp"
 #include "sensor_msgs/JointState.h"
 #include "geometry_msgs/PoseStamped.h"
@@ -14,6 +17,10 @@
 
 using namespace std;
 
+	bool done=false;
+	
+	
+		
 
 class KUKA_INVKIN {
 
@@ -51,6 +58,7 @@ class KUKA_INVKIN {
 		
 	public:
 		KUKA_INVKIN();
+	
 		void run();
 		bool init_robot_model();
 		void get_dirkin();
@@ -60,7 +68,9 @@ class KUKA_INVKIN {
 		void approaching(KDL::Frame goal);
 		void markerPoseCallback(const geometry_msgs::PoseStamped::ConstPtr &markerpose);
 		
+		
 };
+
 
 
 bool KUKA_INVKIN::init_robot_model() {
@@ -188,8 +198,9 @@ void KUKA_INVKIN::approaching(KDL::Frame goal){
 
 KDL::JntArray q_out(_k_chain.getNrOfJoints());
 _fksolver->JntToCart(*_q_in, _p_out);
-cout<<"marker array: " << _marker_pose.pose.position <<endl;
-cout <<"kuka pose x: "	<< _p_out.p.x()  << " y: "<< _p_out.p.y()<< " z: "<<_p_out.p.z() <<endl ;
+
+//cout<<"marker pose: " << _marker_pose.pose.position <<endl;
+//cout <<"kuka pose x: "	<< _p_out.p.x()  << " y: "<< _p_out.p.y()<< " z: "<<_p_out.p.z() <<endl ;
 
 //CHOOSE X
 if(_marker_pose.pose.position.x>0 &&  _p_out.p.x()>0)
@@ -215,8 +226,7 @@ else if (_marker_pose.pose.position.y<0 && _p_out.p.y()>0)
 goal.p.data[1]=_p_out.p.y()-abs(_marker_pose.pose.position.y);
 
 //Z
-//goal.p.data[0]=_marker_pose.pose.position.x;
-//goal.p.data[1]=_marker_pose.pose.position.y;
+
 goal.p.data[2]=_p_out.p.z()-_marker_pose.pose.position.z;
 
 std_msgs::Float64 cmd[7];
@@ -321,13 +331,29 @@ void KUKA_INVKIN::run() {
 }
 
 
+bool service_callback( rl_exam::service::Request &req, rl_exam::service::Response &res){
 
+	stringstream ss;
+	ss << "Tool Received!"; 
+	res.out = ss.str();
+	ROS_INFO( "From Client [%s], Server says [%s]", req.in.c_str(), res.out.c_str());
+	
+	
+	
+	KUKA_INVKIN ik;
+	ik.run();
+	return true;
+}
 
 int main(int argc, char** argv) {
 
 	ros::init(argc, argv, "kuka_iiwa_kdl");
-	KUKA_INVKIN ik;
-	ik.run();
-
+	ROS_INFO("Kuka is waiting for turtlebot to arrive: ");
+	
+	ros::NodeHandle n;
+	ros::ServiceServer service = n.advertiseService("service", service_callback);
+	ros::spin();
+	
+	
 	return 0;
 }

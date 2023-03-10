@@ -1,4 +1,7 @@
 #include "ros/ros.h"
+#include "rl_exam/service.h"
+#include <iostream>
+#include <sstream>
 #include <aruco/aruco.h>
 #include "boost/thread.hpp"
 #include "geometry_msgs/Twist.h"
@@ -10,7 +13,7 @@
 
 using namespace std;
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
-
+	
 class SEARCH_OBJ{
     private:
 			struct Coord{
@@ -42,6 +45,7 @@ class SEARCH_OBJ{
 		bool center =false;
 		bool turned=false;
 		bool pubmark= false;
+	
 		void markerMsgsCallback(const aruco_msgs::MarkerArray::ConstPtr &markerpoint);
 		void reach_goal();
 };
@@ -154,13 +158,32 @@ void SEARCH_OBJ::move(float x_des, float y_des, float w_des){
 		center=true;
 		if(goal.target_pose.pose.position.x==kuka.x && goal.target_pose.pose.position.y == kuka.y){
 				cout <<"end" <<endl;
-				exit(1);
+				//CLIENT
+						ros::NodeHandle n;
+	ros::Rate loop_rate(10);
+	ros::ServiceClient client =
+	n.serviceClient<rl_exam::service>("service");
+
+		rl_exam::service srv;
+		std::stringstream ss;
+		ss << "Starting from Here";
+		srv.request.in = ss.str();
+		if (client.call(srv)) {
+			cout << "From Client: ["<<	srv.request.in << "], Server says [" << srv.response.out << "]" << endl;
 		}
+		else {
+			ROS_ERROR("Failed to call service");
+		}
+		ros::spinOnce();
+		loop_rate.sleep();
+	
+	}
+		
+		
 		 	
 		 }
      else
        ROS_INFO("The base failed to move for some reason");
-	return;
    
 }
 
@@ -169,7 +192,6 @@ void SEARCH_OBJ::reach_goal()
 ROS_INFO("Turtlebot found the tool, now it will reach Kuka Iiwa.");
 				usleep(1000000);
 				move(kuka.x,kuka.y,kuka.w);	
-				return;
 }
 
 void SEARCH_OBJ::check(){
@@ -223,9 +245,10 @@ void SEARCH_OBJ::run() {
 int main(int argc, char** argv ) {
 
 	ros::init(argc, argv, "search_obj"); //node name
-
 	SEARCH_OBJ so;
 	so.chooseinput();
 	so.run();
+	
+
 	return 0;
 }
