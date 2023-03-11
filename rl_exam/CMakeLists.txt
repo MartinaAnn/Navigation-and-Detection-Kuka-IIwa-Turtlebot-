@@ -20,9 +20,8 @@ find_package(catkin REQUIRED COMPONENTS
   gazebo_ros_control
   geometry_msgs
   message_generation
-   message_runtime
+  message_runtime
   kdl_parser
-
   roscpp
   roslib
   rviz

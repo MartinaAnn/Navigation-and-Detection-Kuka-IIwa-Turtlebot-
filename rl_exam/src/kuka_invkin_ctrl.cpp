@@ -17,11 +17,6 @@
 
 using namespace std;
 
-	bool done=false;
-	
-	
-		
-
 class KUKA_INVKIN {
 
 		private:
@@ -31,7 +26,6 @@ class KUKA_INVKIN {
 		ros::Publisher _cmd_pub[7];
 		ros::Subscriber _marker_sub;
 		ros::Subscriber _ee_sub;
-		sensor_msgs::JointState js;
 		
 		KDL::Tree iiwa_tree;
 		KDL::ChainFkSolverPos_recursive *_fksolver; //Forward position solver	
@@ -40,20 +34,20 @@ class KUKA_INVKIN {
 		KDL::Chain _k_chain;
 		KDL::JntArray *_q_in;
 		KDL::Frame _p_out;
+		KDL::Frame goal;
 		
-			geometry_msgs::Pose cpose;
-		
-		
-		bool _first_js;
-		bool _first_fk;
+		geometry_msgs::Pose cpose;
 		geometry_msgs::PoseStamped _marker_pose; 
 		geometry_msgs::Pose _eef_pose;
+		sensor_msgs::JointState js;
 		const geometry_msgs::PoseStamped::ConstPtr markerpose;
 	
 		std::vector<geometry_msgs::PoseStamped> check_size_marker;
+		bool _first_js;
+		bool _first_fk;
 		bool seemarker;
 		
-		KDL::Frame goal;
+		
 		
 		
 	public:
@@ -65,15 +59,15 @@ class KUKA_INVKIN {
 		void joint_states_cb( sensor_msgs::JointState );
 		void ctrl_loop();
 		void goto_initial_position( float dp[7] );
-		void approaching(KDL::Frame goal);
+		void approaching(KDL::Frame goal); //function to bring the manipulator close to the marker frame
 		void markerPoseCallback(const geometry_msgs::PoseStamped::ConstPtr &markerpose);
-		
 		
 };
 
 
 
 bool KUKA_INVKIN::init_robot_model() {
+
 	std::string robot_desc_string;
 	_nh.param("/kuka_iiwa/robot_description", robot_desc_string, std::string());
 	if (!kdl_parser::treeFromString(robot_desc_string, iiwa_tree)){
@@ -92,6 +86,7 @@ bool KUKA_INVKIN::init_robot_model() {
 	_q_in = new KDL::JntArray( _k_chain.getNrOfJoints() );
 	return true;
 }
+
 
 
 KUKA_INVKIN::KUKA_INVKIN() {
@@ -123,14 +118,13 @@ KUKA_INVKIN::KUKA_INVKIN() {
 
 
 
-
 void KUKA_INVKIN::joint_states_cb( sensor_msgs::JointState js ) {
 
 	for(int i=0; i<7; i++ ) 
 		_q_in->data[i] = js.position[i];
-
 	_first_js = true;
 }
+
 
 
 void KUKA_INVKIN::goto_initial_position( float dp[7] ) {
@@ -152,7 +146,6 @@ void KUKA_INVKIN::goto_initial_position( float dp[7] ) {
 		}
 		r.sleep();
 	}
-
 	sleep(2);
 }
 
@@ -161,16 +154,11 @@ void KUKA_INVKIN::goto_initial_position( float dp[7] ) {
 void KUKA_INVKIN::get_dirkin() {
 
 	ros::Rate r(50);
-
-
 	KDL::JntArray q_curr(_k_chain.getNrOfJoints());
-
 
 	while( !_first_js ) usleep(0.1);
 
-
 	while(ros::ok()) {
-
 
 		_fksolver->JntToCart(*_q_in, _p_out);
 
@@ -195,43 +183,46 @@ void KUKA_INVKIN::get_dirkin() {
 
 void KUKA_INVKIN::approaching(KDL::Frame goal){
 
+	KDL::JntArray q_out(_k_chain.getNrOfJoints());
+	_fksolver->JntToCart(*_q_in, _p_out);
 
-KDL::JntArray q_out(_k_chain.getNrOfJoints());
-_fksolver->JntToCart(*_q_in, _p_out);
+	//cout<<"marker pose: " << _marker_pose.pose.position <<endl;
+	//cout <<"kuka pose x: "	<< _p_out.p.x()  << " y: "<< _p_out.p.y()<< " z: "<<_p_out.p.z() <<endl ;
 
-//cout<<"marker pose: " << _marker_pose.pose.position <<endl;
-//cout <<"kuka pose x: "	<< _p_out.p.x()  << " y: "<< _p_out.p.y()<< " z: "<<_p_out.p.z() <<endl ;
+	/* -- OSS -- The following check must be done in order to make the arm go as close as possible to the marker frame center. 
+	  This center, because of some problem of camera calibration or marker dimensions, is not located in the center of the marker displayed by the camera. 
+	  I tried to implement a solution that brings the kuka in the point of coordinates of the marker frame seen by the camera */
+	
+	//CHOOSE X
+	if(_marker_pose.pose.position.x>0 &&  _p_out.p.x()>0)
+	goal.p.data[0]= _p_out.p.x()+_marker_pose.pose.position.x;
+	else if (_marker_pose.pose.position.x<0 &&  _p_out.p.x()<0)
+	goal.p.data[0]= _p_out.p.x()-abs(_marker_pose.pose.position.x);
+	else if(_marker_pose.pose.position.x>0 &&  _p_out.p.x()<0 && abs(_p_out.p.x()<0)<_marker_pose.pose.position.x)
+	goal.p.data[0]= abs(_p_out.p.x())+_marker_pose.pose.position.x;
+	else if(_marker_pose.pose.position.x>0 &&  _p_out.p.x()<0 && abs(_p_out.p.x()<0)>_marker_pose.pose.position.x)
+	goal.p.data[0]= _p_out.p.x()-_marker_pose.pose.position.x;
+	else if (_marker_pose.pose.position.x<0 &&  _p_out.p.x()>0)
+	goal.p.data[0]= _p_out.p.x()+abs(_marker_pose.pose.position.x);
 
-//CHOOSE X
-if(_marker_pose.pose.position.x>0 &&  _p_out.p.x()>0)
-goal.p.data[0]= _p_out.p.x()+_marker_pose.pose.position.x;
-else if (_marker_pose.pose.position.x<0 &&  _p_out.p.x()<0)
-goal.p.data[0]= _p_out.p.x()-abs(_marker_pose.pose.position.x);
-else if(_marker_pose.pose.position.x>0 &&  _p_out.p.x()<0 && abs(_p_out.p.x()<0)<_marker_pose.pose.position.x)
-goal.p.data[0]= abs(_p_out.p.x())+_marker_pose.pose.position.x;
-else if(_marker_pose.pose.position.x>0 &&  _p_out.p.x()<0 && abs(_p_out.p.x()<0)>_marker_pose.pose.position.x)
-goal.p.data[0]= _p_out.p.x()-_marker_pose.pose.position.x;
-else if (_marker_pose.pose.position.x<0 &&  _p_out.p.x()>0)
-goal.p.data[0]= _p_out.p.x()+abs(_marker_pose.pose.position.x);
+	//CHOOSE Y
 
-//CHOOSE Y
+	if(_marker_pose.pose.position.y>0 && _p_out.p.y()>0)
+	goal.p.data[1]=_p_out.p.y()-_marker_pose.pose.position.y;
+	else if (_marker_pose.pose.position.y<0 && _p_out.p.y()<0)
+	goal.p.data[1]=_p_out.p.y()-abs(_marker_pose.pose.position.y);
+	else if(_marker_pose.pose.position.y>0 && _p_out.p.y()<0)
+	goal.p.data[1]=abs(_p_out.p.y())+_marker_pose.pose.position.y;
+	else if (_marker_pose.pose.position.y<0 && _p_out.p.y()>0)
+	goal.p.data[1]=_p_out.p.y()-abs(_marker_pose.pose.position.y);
 
-if(_marker_pose.pose.position.y>0 && _p_out.p.y()>0)
-goal.p.data[1]=_p_out.p.y()-_marker_pose.pose.position.y;
-else if (_marker_pose.pose.position.y<0 && _p_out.p.y()<0)
-goal.p.data[1]=_p_out.p.y()-abs(_marker_pose.pose.position.y);
-else if(_marker_pose.pose.position.y>0 && _p_out.p.y()<0)
-goal.p.data[1]=abs(_p_out.p.y())+_marker_pose.pose.position.y;
-else if (_marker_pose.pose.position.y<0 && _p_out.p.y()>0)
-goal.p.data[1]=_p_out.p.y()-abs(_marker_pose.pose.position.y);
+	//Z
 
-//Z
+	goal.p.data[2]=_p_out.p.z()-_marker_pose.pose.position.z;
 
-goal.p.data[2]=_p_out.p.z()-_marker_pose.pose.position.z;
+	std_msgs::Float64 cmd[7];
 
-std_msgs::Float64 cmd[7];
-
-if( _ik_solver_pos->CartToJnt(*_q_in, goal, q_out) != KDL::SolverI::E_NOERROR ) 
+	if( _ik_solver_pos->CartToJnt(*_q_in, goal, q_out) != KDL::SolverI::E_NOERROR ) 
 		cout << "failing in ik!" << endl;
 
 	for(int i=0; i<7; i++) {
@@ -250,6 +241,7 @@ void KUKA_INVKIN::ctrl_loop() {
 	seemarker=false;
 	while( !_first_fk ) usleep(0.1);
 	
+	// I choose the starting position as the one where the turtlebot arrived in order to make it seem like they're exchanging the tool
 	float i_cmd[7];
 	i_cmd[0] = -1.57;
 	i_cmd[1] = i_cmd[4] = i_cmd[2] = i_cmd[6] = 0.0;
@@ -262,12 +254,10 @@ void KUKA_INVKIN::ctrl_loop() {
 	KDL::Frame F_dest; //ha un campo posizione p e uno orientamento M
 	KDL::JntArray q_out(_k_chain.getNrOfJoints());
 
-
 	F_dest.p.data[0] = _p_out.p.x();
 	F_dest.p.data[1] = _p_out.p.y();
 	F_dest.p.data[2] = _p_out.p.z();
 	
-
 	for(int i=0; i<9; i++ )
 		F_dest.M.data[i] = _p_out.M.data[i];
 
@@ -283,17 +273,21 @@ void KUKA_INVKIN::ctrl_loop() {
 	for(int i=1; i<7; i++) {
 		_cmd_pub[i].publish (cmd[i]);
 	}
-	cout<<"Kuka took the object, now it will place it."<<endl;
-	float step=0.2;
-	seemarker=true;
 	
+	cout << "Kuka took the object, now it will place it." << endl; 
+	
+	seemarker=true;//start to see if there are markers -> enters in the markerPoseCallback	
+	float step=0.2; //declaring a step to make the kuka rotate, used only here
+	
+	//start rotate, but because of the configuration of the robot it stops when cmd[0].data~=2.96
 	while(check_size_marker.size()==0&&cmd[0].data<2.96){
 		cmd[0].data=cmd[0].data+step;
 		_cmd_pub[0].publish (cmd[0]);
-		usleep(100000);
+		usleep(100000); //in this way the robot rotates at a good smooth velocity without abrupt jerks
 	}
+	
+	// if cmd[0].data~=2.96 I subtract the step in order to make kuka rotate the other way around
 	if(cmd[0].data>2.96&&check_size_marker.size()==0){
-	cout<<"in if" << endl;
 		while(check_size_marker.size()==0){
 		cmd[0].data=cmd[0].data-step;
 		_cmd_pub[0].publish (cmd[0]);
@@ -303,20 +297,19 @@ void KUKA_INVKIN::ctrl_loop() {
 	
 	seemarker=false;
 	if(check_size_marker.size()!=0){
-	_first_js=false;
+		_first_js=false;
 		approaching(F_dest);
-	
 	}
 }
 
 
 void KUKA_INVKIN::markerPoseCallback(const geometry_msgs::PoseStamped::ConstPtr &markerpose){
+//must be called only when kuka is bent and searching for markers
 	if(seemarker){
-	seemarker=false;
-	check_size_marker.push_back(*markerpose);
-	//cout<<"size marker array: " << check_size_marker.size() <<endl;
-	_marker_pose.pose= markerpose -> pose;
-	
+		seemarker=false; //there is only one marker, kuka must not search for others
+		check_size_marker.push_back(*markerpose); //I can do this because the project takes into account that I have only one marker to check and then I don't increase this vector
+		//cout<<"size marker array: " << check_size_marker.size() <<endl;
+		_marker_pose.pose= markerpose -> pose;
 	}
 }
 
@@ -330,16 +323,15 @@ void KUKA_INVKIN::run() {
 
 }
 
+//This node acts as a server waiting for the client that is the other one dealing with turtlebot
 
 bool service_callback( rl_exam::service::Request &req, rl_exam::service::Response &res){
 
 	stringstream ss;
 	ss << "Tool Received!"; 
 	res.out = ss.str();
-	ROS_INFO( "From Client [%s], Server says [%s]", req.in.c_str(), res.out.c_str());
-	
-	
-	
+	ROS_INFO( "Turtlebot is [%s], Kuka says [%s]", req.in.c_str(), res.out.c_str());
+	//after the communication is ended well Kuka can start its job	
 	KUKA_INVKIN ik;
 	ik.run();
 	return true;
@@ -348,7 +340,7 @@ bool service_callback( rl_exam::service::Request &req, rl_exam::service::Respons
 int main(int argc, char** argv) {
 
 	ros::init(argc, argv, "kuka_iiwa_kdl");
-	ROS_INFO("Kuka is waiting for turtlebot to arrive: ");
+	cout << "Kuka is waiting for turtlebot to arrive." << endl;
 	
 	ros::NodeHandle n;
 	ros::ServiceServer service = n.advertiseService("service", service_callback);
