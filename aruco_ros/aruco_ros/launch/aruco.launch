@@ -10,6 +10,8 @@
 
 
     <node pkg="aruco_ros" type="single" name="simple_single">
+      <!--  <remap from="/camera_info" to="/kuka_iiwa/depth_camera/camera_info" />
+        <remap from="/image" to="/kuka_iiwa/depth_camera/image_raw" /> -->
         <remap from="/camera_info" to="/kuka_iiwa/camera/camera_info" />
         <remap from="/image" to="/kuka_iiwa/camera/image_raw" />
         <param name="image_is_rectified" value="True"/>

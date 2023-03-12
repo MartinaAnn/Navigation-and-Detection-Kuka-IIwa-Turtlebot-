@@ -35,8 +35,9 @@
   </group>   
 
   <!-- RVIZ -->
-  <node name="rviz" pkg="rviz" type="rviz"  args="-d $(find rl_exam)/conf/rviz_config.rviz" /> 
-<node pkg="tf" name="world_to_map" type="static_transform_publisher" args="3.06 -6.26 0 0 0 0 world map 100" />
+  <!-- <node name="rviz" pkg="rviz" type="rviz" /> -->
+ <node name="rviz" pkg="rviz" type="rviz"  args="-d $(find rl_exam)/conf/rviz_config.rviz" /> 
+ <node pkg="tf" name="world_to_map" type="static_transform_publisher" args="3.06 -6.26 0 0 0 0 world map 100" />
 
   
 <!--  Map server -->
