@@ -1,8 +1,8 @@
 <?xml version="1.0" ?>
 <launch>
 
-  <include file="$(find aruco_ros)/launch/aruco.launch"/>  <!--initializes the topic simple_single for the kuka-->
-  <include file="$(find aruco_ros)/launch/marker_publisher.launch"/> <!--initializes the topic aruco_marker_publisher for the turtlebot-->
+  <include file="$(find aruco_ros)/launch/aruco.launch"/>  <!--for the kuka-->
+  <include file="$(find aruco_ros)/launch/marker_publisher.launch"/> <!--for the turtlebot-->
 
 </launch>
 
