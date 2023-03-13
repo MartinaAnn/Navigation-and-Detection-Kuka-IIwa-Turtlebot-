@@ -76,8 +76,8 @@ $ rqt_image_view
 
 ## Outline
 
-![Client terminal results] (/Images_for_readme/finalturtle.png) 
-![Server terminal results] (/Images_for_readme/finalkuka.png) 
-![Gazebo results] (/Images_for_readme/final.png) 
+![Client terminal results](/Images_for_readme/finalturtle.png) 
+![Server terminal results](/Images_for_readme/finalkuka.png) 
+![Gazebo results](/Images_for_readme/final.png) 
 
 
