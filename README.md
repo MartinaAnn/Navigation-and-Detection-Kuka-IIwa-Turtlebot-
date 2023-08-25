@@ -5,7 +5,7 @@ Simulation in an industrial environment in which Turtlebot must search for a too
 ## Features
 
 - The project shows the modularity of a multi-robot system
-- Example of a client/server behaviour
+- Example of a service behaviour
 - Insight on the usage of sensors 
 
 ## Getting Started (pre-requirements)
@@ -40,7 +40,7 @@ $ roscore
 - Launch the main node:
 
 ```sh
-$ roslaunch rl_exam spawn_robots_and_world.launch
+$ roslaunch main_folder spawn_robots_and_world.launch
 ```
 
 - Launch aruco node for the detection of the markers:
@@ -52,13 +52,13 @@ $ roslaunch aruco_ros all_aruco.launch
 - Start the server node:
 
 ```sh
-$ rosrun rl_exam kuka_invkin_ctrl
+$ rosrun main_folder kuka_invkin_ctrl
 ```
 
 - Start the client node: 
 
 ```sh
-$ rosrun rl_exam move_and_search
+$ rosrun main_folder move_and_search
 ```
 
 If you want to visualize the images on the camera sensors you can use the tool from ROS:
